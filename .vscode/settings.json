@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "algorithm": "cpp",
+        "complex": "cpp",
+        "vector": "cpp"
+    }
+}

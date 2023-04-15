@@ -1,51 +1,55 @@
 /* **************************
  * CSCI 420
  * Assignment 3 Raytracer
- * Name: <Your name here>
+ * Name: Rachel Bakke
  * *************************
-*/
+ */
 
 #ifdef WIN32
-  #include <windows.h>
+#include <windows.h>
 #endif
 
 #if defined(WIN32) || defined(linux)
-  #include <GL/gl.h>
-  #include <GL/glut.h>
+#include <GL/gl.h>
+#include <GL/glut.h>
 #elif defined(__APPLE__)
-  #include <OpenGL/gl.h>
-  #include <GLUT/glut.h>
+#include <OpenGL/gl.h>
+#include <GLUT/glut.h>
 #endif
+#include <glm/glm.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef WIN32
-  #define strcasecmp _stricmp
+#define strcasecmp _stricmp
 #endif
 
 #include <imageIO.h>
+#include <vector>
 
 #define MAX_TRIANGLES 20000
 #define MAX_SPHERES 100
 #define MAX_LIGHTS 100
 
-char * filename = NULL;
+char *filename = NULL;
 
-//different display modes
+// different display modes
 #define MODE_DISPLAY 1
 #define MODE_JPEG 2
 
 int mode = MODE_DISPLAY;
 
-//you may want to make these smaller for debugging purposes
+// you may want to make these smaller for debugging purposes
 #define WIDTH 640
 #define HEIGHT 480
 
-//the field of view of the camera
+// the field of view of the camera
 #define fov 60.0
 
 unsigned char buffer[HEIGHT][WIDTH][3];
+
+using namespace std;
 
 struct Vertex
 {
@@ -85,32 +89,73 @@ int num_triangles = 0;
 int num_spheres = 0;
 int num_lights = 0;
 
-void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b);
-void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
-void plot_pixel(int x,int y,unsigned char r,unsigned char g,unsigned char b);
+void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b);
+void plot_pixel_jpeg(int x, int y, unsigned char r, unsigned char g, unsigned char b);
+void plot_pixel(int x, int y, unsigned char r, unsigned char g, unsigned char b);
 
-//MODIFY THIS FUNCTION
+// MODIFY THIS FUNCTION
 void draw_scene()
 {
-  //a simple test output
-  for(unsigned int x=0; x<WIDTH; x++)
+  // a simple test output
+  for (unsigned int x = 0; x < WIDTH; x++)
   {
-    glPointSize(2.0);  
+    glPointSize(2.0);
     glBegin(GL_POINTS);
-    for(unsigned int y=0; y<HEIGHT; y++)
+    for (unsigned int y = 0; y < HEIGHT; y++)
     {
-      plot_pixel(x, y, x % 256, y % 256, (x+y) % 256);
+      plot_pixel(x, y, x % 256, y % 256, (x + y) % 256);
     }
+
     glEnd();
     glFlush();
   }
-  printf("Done!\n"); fflush(stdout);
+  float a = WIDTH / HEIGHT;
+  float topLeftX = -a * tan(fov / 2);
+  float topLeftY = tan(fov / 2);
+  float topLeftZ = -1;
+  float topRightX = a * tan(fov / 2);
+  float topRightY = tan(fov / 2);
+  float topRightZ = -1;
+  float botRightX = a * tan(fov / 2);
+  float botRightY = -tan(fov / 2);
+  float botRightZ = -1;
+  float botLeftX = -a * tan(fov / 2);
+  float botLeftY = -tan(fov / 2);
+  float botLeftZ = -1;
+  // stochastic sampling is extra bonus
+
+  float width3D = sqrt(pow(topRightX - topLeftX, 2) + pow(topRightY - topLeftY, 2) + pow(topRightZ - topLeftZ, 2) * 1.0);
+  float height3D = sqrt(pow(topRightX - botRightX, 2) + pow(topRightY - botRightY, 2) + pow(topRightZ - botRightZ, 2) * 1.0);
+  int wStepSize = width3D / WIDTH;
+  int hStepSize = height3D / HEIGHT;
+
+  glm::vec3 rays[HEIGHT][WIDTH];
+
+  for (int i = 0; i < WIDTH; i++)
+  {
+    for (int j = 0; j < HEIGHT; j++)
+    {
+      glm::vec3 rayPoint(i * wStepSize, j * hStepSize, -1);
+      rays[i][j] = rayPoint;
+    }
+  }
+
+  // use ray to output color vector --> plot pixel
+  //  make a ray object with origin and direction is normalize location
+
+  // we know height and width are integers of the image, not real length but decide resolution --> index of pixels
+  // get step size by dividing corners by width and height
+  // then go through and create double vector of pixels
+  // store direction of arrays separately by normalized the pixels (dont need to subtract because origin is 0,0,0)
+
+  printf("Done!\n");
+  fflush(stdout);
 }
 
 void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b)
 {
   glColor3f(((float)r) / 255.0f, ((float)g) / 255.0f, ((float)b) / 255.0f);
-  glVertex2i(x,y);
+  glVertex2i(x, y);
 }
 
 void plot_pixel_jpeg(int x, int y, unsigned char r, unsigned char g, unsigned char b)
@@ -122,9 +167,9 @@ void plot_pixel_jpeg(int x, int y, unsigned char r, unsigned char g, unsigned ch
 
 void plot_pixel(int x, int y, unsigned char r, unsigned char g, unsigned char b)
 {
-  plot_pixel_display(x,y,r,g,b);
-  if(mode == MODE_JPEG)
-    plot_pixel_jpeg(x,y,r,g,b);
+  plot_pixel_display(x, y, r, g, b);
+  if (mode == MODE_JPEG)
+    plot_pixel_jpeg(x, y, r, g, b);
 }
 
 void save_jpg()
@@ -134,13 +179,13 @@ void save_jpg()
   ImageIO img(WIDTH, HEIGHT, 3, &buffer[0][0][0]);
   if (img.save(filename, ImageIO::FORMAT_JPEG) != ImageIO::OK)
     printf("Error in Saving\n");
-  else 
+  else
     printf("File saved Successfully\n");
 }
 
 void parse_check(const char *expected, char *found)
 {
-  if(strcasecmp(expected,found))
+  if (strcasecmp(expected, found))
   {
     printf("Expected '%s ' found '%s '\n", expected, found);
     printf("Parse error, abnormal abortion\n");
@@ -148,94 +193,94 @@ void parse_check(const char *expected, char *found)
   }
 }
 
-void parse_doubles(FILE* file, const char *check, double p[3])
+void parse_doubles(FILE *file, const char *check, double p[3])
 {
   char str[100];
-  fscanf(file,"%s",str);
-  parse_check(check,str);
-  fscanf(file,"%lf %lf %lf",&p[0],&p[1],&p[2]);
-  printf("%s %lf %lf %lf\n",check,p[0],p[1],p[2]);
+  fscanf(file, "%s", str);
+  parse_check(check, str);
+  fscanf(file, "%lf %lf %lf", &p[0], &p[1], &p[2]);
+  printf("%s %lf %lf %lf\n", check, p[0], p[1], p[2]);
 }
 
 void parse_rad(FILE *file, double *r)
 {
   char str[100];
-  fscanf(file,"%s",str);
-  parse_check("rad:",str);
-  fscanf(file,"%lf",r);
-  printf("rad: %f\n",*r);
+  fscanf(file, "%s", str);
+  parse_check("rad:", str);
+  fscanf(file, "%lf", r);
+  printf("rad: %f\n", *r);
 }
 
 void parse_shi(FILE *file, double *shi)
 {
   char s[100];
-  fscanf(file,"%s",s);
-  parse_check("shi:",s);
-  fscanf(file,"%lf",shi);
-  printf("shi: %f\n",*shi);
+  fscanf(file, "%s", s);
+  parse_check("shi:", s);
+  fscanf(file, "%lf", shi);
+  printf("shi: %f\n", *shi);
 }
 
 int loadScene(char *argv)
 {
-  FILE * file = fopen(argv,"r");
+  FILE *file = fopen(argv, "r");
   int number_of_objects;
   char type[50];
   Triangle t;
   Sphere s;
   Light l;
-  fscanf(file,"%i", &number_of_objects);
+  fscanf(file, "%i", &number_of_objects);
 
-  printf("number of objects: %i\n",number_of_objects);
+  printf("number of objects: %i\n", number_of_objects);
 
-  parse_doubles(file,"amb:",ambient_light);
+  parse_doubles(file, "amb:", ambient_light);
 
-  for(int i=0; i<number_of_objects; i++)
+  for (int i = 0; i < number_of_objects; i++)
   {
-    fscanf(file,"%s\n",type);
-    printf("%s\n",type);
-    if(strcasecmp(type,"triangle")==0)
+    fscanf(file, "%s\n", type);
+    printf("%s\n", type);
+    if (strcasecmp(type, "triangle") == 0)
     {
       printf("found triangle\n");
-      for(int j=0;j < 3;j++)
+      for (int j = 0; j < 3; j++)
       {
-        parse_doubles(file,"pos:",t.v[j].position);
-        parse_doubles(file,"nor:",t.v[j].normal);
-        parse_doubles(file,"dif:",t.v[j].color_diffuse);
-        parse_doubles(file,"spe:",t.v[j].color_specular);
-        parse_shi(file,&t.v[j].shininess);
+        parse_doubles(file, "pos:", t.v[j].position);
+        parse_doubles(file, "nor:", t.v[j].normal);
+        parse_doubles(file, "dif:", t.v[j].color_diffuse);
+        parse_doubles(file, "spe:", t.v[j].color_specular);
+        parse_shi(file, &t.v[j].shininess);
       }
 
-      if(num_triangles == MAX_TRIANGLES)
+      if (num_triangles == MAX_TRIANGLES)
       {
         printf("too many triangles, you should increase MAX_TRIANGLES!\n");
         exit(0);
       }
       triangles[num_triangles++] = t;
     }
-    else if(strcasecmp(type,"sphere")==0)
+    else if (strcasecmp(type, "sphere") == 0)
     {
       printf("found sphere\n");
 
-      parse_doubles(file,"pos:",s.position);
-      parse_rad(file,&s.radius);
-      parse_doubles(file,"dif:",s.color_diffuse);
-      parse_doubles(file,"spe:",s.color_specular);
-      parse_shi(file,&s.shininess);
+      parse_doubles(file, "pos:", s.position);
+      parse_rad(file, &s.radius);
+      parse_doubles(file, "dif:", s.color_diffuse);
+      parse_doubles(file, "spe:", s.color_specular);
+      parse_shi(file, &s.shininess);
 
-      if(num_spheres == MAX_SPHERES)
+      if (num_spheres == MAX_SPHERES)
       {
         printf("too many spheres, you should increase MAX_SPHERES!\n");
         exit(0);
       }
       spheres[num_spheres++] = s;
     }
-    else if(strcasecmp(type,"light")==0)
+    else if (strcasecmp(type, "light") == 0)
     {
       printf("found light\n");
-      parse_doubles(file,"pos:",l.position);
-      parse_doubles(file,"col:",l.color);
+      parse_doubles(file, "pos:", l.position);
+      parse_doubles(file, "col:", l.color);
 
-      if(num_lights == MAX_LIGHTS)
+      if (num_lights == MAX_LIGHTS)
       {
         printf("too many lights, you should increase MAX_LIGHTS!\n");
         exit(0);
@@ -244,7 +289,7 @@ int loadScene(char *argv)
     }
     else
     {
-      printf("unknown type in scene description:\n%s\n",type);
+      printf("unknown type in scene description:\n%s\n", type);
       exit(0);
     }
   }
@@ -258,56 +303,55 @@ void display()
 void init()
 {
   glMatrixMode(GL_PROJECTION);
-  glOrtho(0,WIDTH,0,HEIGHT,1,-1);
+  glOrtho(0, WIDTH, 0, HEIGHT, 1, -1);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 
-  glClearColor(0,0,0,0);
+  glClearColor(0, 0, 0, 0);
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void idle()
 {
-  //hack to make it only draw once
-  static int once=0;
-  if(!once)
+  // hack to make it only draw once
+  static int once = 0;
+  if (!once)
   {
     draw_scene();
-    if(mode == MODE_JPEG)
+    if (mode == MODE_JPEG)
       save_jpg();
   }
-  once=1;
+  once = 1;
 }
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
   if ((argc < 2) || (argc > 3))
-  {  
-    printf ("Usage: %s <input scenefile> [output jpegname]\n", argv[0]);
+  {
+    printf("Usage: %s <input scenefile> [output jpegname]\n", argv[0]);
     exit(0);
   }
-  if(argc == 3)
+  if (argc == 3)
   {
     mode = MODE_JPEG;
     filename = argv[2];
   }
-  else if(argc == 2)
+  else if (argc == 2)
     mode = MODE_DISPLAY;
 
-  glutInit(&argc,argv);
+  glutInit(&argc, argv);
   loadScene(argv[1]);
 
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
-  glutInitWindowPosition(0,0);
-  glutInitWindowSize(WIDTH,HEIGHT);
+  glutInitWindowPosition(0, 0);
+  glutInitWindowSize(WIDTH, HEIGHT);
   int window = glutCreateWindow("Ray Tracer");
-  #ifdef __APPLE__
-    // This is needed on recent Mac OS X versions to correctly display the window.
-    glutReshapeWindow(WIDTH - 1, HEIGHT - 1);
-  #endif
+#ifdef __APPLE__
+  // This is needed on recent Mac OS X versions to correctly display the window.
+  glutReshapeWindow(WIDTH - 1, HEIGHT - 1);
+#endif
   glutDisplayFunc(display);
   glutIdleFunc(idle);
   init();
   glutMainLoop();
 }
-
