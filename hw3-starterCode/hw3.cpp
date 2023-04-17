@@ -17,6 +17,7 @@
 #include <GLUT/glut.h>
 #endif
 #include <glm/glm.hpp>
+#include <ray.cpp>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -129,24 +130,22 @@ void draw_scene()
   int wStepSize = width3D / WIDTH;
   int hStepSize = height3D / HEIGHT;
 
-  glm::vec3 rays[HEIGHT][WIDTH];
+  // step 1 generate rays
+  Ray rays[HEIGHT][WIDTH];
 
   for (int i = 0; i < WIDTH; i++)
   {
     for (int j = 0; j < HEIGHT; j++)
     {
-      glm::vec3 rayPoint(i * wStepSize, j * hStepSize, -1);
-      rays[i][j] = rayPoint;
+      glm::vec3 direction(i * wStepSize, j * hStepSize, -1);
+      direction = normalize(direction);
+      glm::vec3 origin1((0, 0, 0));
+      Ray myNewRay = Ray(origin1, direction);
+      rays[i][j] = myNewRay;
     }
   }
 
-  // use ray to output color vector --> plot pixel
-  //  make a ray object with origin and direction is normalize location
-
-  // we know height and width are integers of the image, not real length but decide resolution --> index of pixels
-  // get step size by dividing corners by width and height
-  // then go through and create double vector of pixels
-  // store direction of arrays separately by normalized the pixels (dont need to subtract because origin is 0,0,0)
+  // step 2intersection code
 
   printf("Done!\n");
   fflush(stdout);
