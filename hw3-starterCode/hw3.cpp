@@ -173,9 +173,19 @@ glm::vec3 colorRay(Ray curr)
       directionLight = normalize(directionLight);
       currShadow.setDirection(directionLight);
       glm::vec3 posShadowIntersect = intersect(currShadow);
+
       if (posShadowIntersect == maxVal) // no intersection with object --> NO SHADOW
       {
         // phong model solve with normals
+        // get normal of the intersection and values of shininess and everything
+        if (intersectObjType == "sphere")
+        {
+          Sphere currSphere = spheres[intersectObjIndex];
+        }
+        else
+        {
+          Triangle currTriangle = triangles[intersectObjIndex];
+        }
         // need to know shape type and index to access it here and get its normal
         float Ix = lights[l].color[0] * directionLight.x;
         float Iy = lights[l].color[1];
