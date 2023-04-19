@@ -2,10 +2,10 @@
 using namespace std;
 
 class Ray
-{                        // The class
-public:                  // Access specifier
-    glm::vec3 direction; // Attribute (int variable)
-    glm::vec3 origin;    // Attribute (string variable)
+{
+public:
+    glm::vec3 direction;
+    glm::vec3 origin;
     Ray()
     {
         glm::vec3 origin2((0, 0, 0));

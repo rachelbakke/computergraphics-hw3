@@ -3,6 +3,8 @@
  * Assignment 3 Raytracer
  * Name: Rachel Bakke
  * *************************
+ * ./hw3 ./spheres.scene output.jpg
+ *  ./hw3 ./test1.scene output.jpg
  */
 
 #ifdef WIN32
@@ -17,7 +19,7 @@
 #include <GLUT/glut.h>
 #endif
 #include <glm/glm.hpp>
-#include <ray.cpp>
+#include "ray.cpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +30,8 @@
 
 #include <imageIO.h>
 #include <vector>
+#include <string>
+#include <algorithm>
 
 #define MAX_TRIANGLES 20000
 #define MAX_SPHERES 100
@@ -89,66 +93,194 @@ double ambient_light[3];
 int num_triangles = 0;
 int num_spheres = 0;
 int num_lights = 0;
+string intersectObjType = "sphere";
+int intersectObjIndex = 0;
+glm::vec3 intersectObjPos(0, 0, 0);
 
 void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b);
 void plot_pixel_jpeg(int x, int y, unsigned char r, unsigned char g, unsigned char b);
 void plot_pixel(int x, int y, unsigned char r, unsigned char g, unsigned char b);
+glm::vec3 colorRay(Ray curr);
+glm::vec3 intersect(Ray curr);
+
+glm::vec3 maxVal(MAXFLOAT, MAXFLOAT, MAXFLOAT);
 
 // MODIFY THIS FUNCTION
 void draw_scene()
 {
-  // a simple test output
+
+  // get screen setup
+  Ray rays[WIDTH][HEIGHT];
+  printf("START");
+  for (int i = 0; i < WIDTH; i++)
+  {
+    for (int j = 0; j < HEIGHT; j++)
+    {
+      // STEP 1! generate rays
+      float aVal = (WIDTH * 1.0f) / (HEIGHT * 1.0f);
+      float xVal = (2.0f * (i + 0.5f) / (WIDTH * 1.0f) - 1.0f) * aVal * tan(glm::radians(fov) / 2.0f);
+      float yVal = (1.0f - 2.0f * (j + 0.5f) / (HEIGHT * 1.0f) * tan(glm::radians(fov) / 2.0f));
+      glm::vec3 direction(xVal, -yVal, -1); // todo
+      direction = normalize(direction);
+      glm::vec3 origin1((0, 0, 0));
+      Ray currRay = Ray(origin1, direction);
+      rays[i][j] = currRay;
+    }
+  }
+  // PLOTTING PIXELS - get color of the pixel from the ray
   for (unsigned int x = 0; x < WIDTH; x++)
   {
     glPointSize(2.0);
     glBegin(GL_POINTS);
     for (unsigned int y = 0; y < HEIGHT; y++)
     {
-      plot_pixel(x, y, x % 256, y % 256, (x + y) % 256);
+      // plot_pixel(x, y, x % 256, y % 256, (x + y) % 256); //OG
+      glm::vec3 currColor = colorRay(rays[x][y]);
+      // plot_pixel(x, y, currColor.x, currColor.y, currColor.z); //FINAL COLOR
+      glm::vec3 intersectPoint = intersect(rays[x][y]);
+      // printf(" %f, %f, %f", intersectPoint.x, intersectPoint.y, intersectPoint.z);
+      if (intersectPoint != maxVal) // yes intersects
+      {
+        plot_pixel(x, y, 255, 192, 203); // COLOR INTERSECT
+      }
+      else
+      {
+        // printf("NOINTERSECTION");
+        plot_pixel(x, y, 0.0f, 0.0f, 0.0f);
+      }
     }
-
     glEnd();
     glFlush();
   }
-  float a = WIDTH / HEIGHT;
-  float topLeftX = -a * tan(fov / 2);
-  float topLeftY = tan(fov / 2);
-  float topLeftZ = -1;
-  float topRightX = a * tan(fov / 2);
-  float topRightY = tan(fov / 2);
-  float topRightZ = -1;
-  float botRightX = a * tan(fov / 2);
-  float botRightY = -tan(fov / 2);
-  float botRightZ = -1;
-  float botLeftX = -a * tan(fov / 2);
-  float botLeftY = -tan(fov / 2);
-  float botLeftZ = -1;
-  // stochastic sampling is extra bonus
-
-  float width3D = sqrt(pow(topRightX - topLeftX, 2) + pow(topRightY - topLeftY, 2) + pow(topRightZ - topLeftZ, 2) * 1.0);
-  float height3D = sqrt(pow(topRightX - botRightX, 2) + pow(topRightY - botRightY, 2) + pow(topRightZ - botRightZ, 2) * 1.0);
-  int wStepSize = width3D / WIDTH;
-  int hStepSize = height3D / HEIGHT;
-
-  // step 1 generate rays
-  Ray rays[HEIGHT][WIDTH];
-
-  for (int i = 0; i < WIDTH; i++)
-  {
-    for (int j = 0; j < HEIGHT; j++)
-    {
-      glm::vec3 direction(i * wStepSize, j * hStepSize, -1);
-      direction = normalize(direction);
-      glm::vec3 origin1((0, 0, 0));
-      Ray myNewRay = Ray(origin1, direction);
-      rays[i][j] = myNewRay;
-    }
-  }
-
-  // step 2intersection code
 
   printf("Done!\n");
   fflush(stdout);
+}
+
+glm::vec3 colorRay(Ray curr)
+{
+  glm::vec3 color(0, 0, 0);
+  glm::vec3 posIntersect = intersect(curr);
+  // printf(" TEST %f , %f , %f", posIntersect.x, posIntersect.y, posIntersect.z);
+  if (posIntersect != maxVal) // object intersects
+  {
+    // check shadow rays for each light source and see if they are hit
+    for (int l = 0; l < num_lights; l++)
+    {
+      Ray currShadow = Ray();
+      currShadow.setOrigin(posIntersect);
+      glm::vec3 directionLight(lights[l].position[0] - posIntersect.x, lights[l].position[1] - posIntersect.y, lights[l].position[2] - posIntersect.z);
+      directionLight = normalize(directionLight);
+      currShadow.setDirection(directionLight);
+      glm::vec3 posShadowIntersect = intersect(currShadow);
+      if (posShadowIntersect == maxVal) // no intersection with object --> NO SHADOW
+      {
+        // phong model solve with normals
+        // need to know shape type and index to access it here and get its normal
+        float Ix = lights[l].color[0] * directionLight.x;
+        float Iy = lights[l].color[1];
+        float Iz = lights[l].color[2];
+      }
+      else
+      { // YES SHADOW
+        // color is black
+      }
+    }
+    // add global ambiant light, clamp to 1.0 for each rbg value
+  }
+  return color;
+  // get normal of intersection point
+  // cast shadow rays to each of the light sources
+  // throw ambiant light colors at the end
+}
+
+glm::vec3 intersect(Ray curr)
+{
+  vector<float> tValuesSphere;
+  vector<int> indexesSphere;
+  float closeSphereT = MAXFLOAT;
+  float closeSphereIndex;
+
+  vector<float> tValuesTri;
+  vector<int> indexedTri;
+  float closeTriT = MAXFLOAT;
+  float closeTriIndex;
+
+  for (int k = 0; k < num_spheres; k++)
+  {
+    Sphere currSphere = spheres[k];
+    float a = dot(curr.direction, curr.direction);
+    glm::vec3 originToCenter(curr.origin.x - currSphere.position[0], curr.origin.y - currSphere.position[1], curr.origin.z - currSphere.position[2]);
+    float b = 2.0 * dot(originToCenter, curr.direction);
+    float c = dot(originToCenter, originToCenter) - (currSphere.radius * currSphere.radius);
+    // printf(" direction- x: %f y: %f z: %f \n ", curr.direction.x, curr.direction.y, curr.direction.z);
+    //   printf(" ray origin - x: %f y: %f z: %f ,  ", currSphere.position[0], currSphere.position[1], currSphere.position[2]);
+    //  printf("radius %f pos %f %f %f\n", currSphere.radius, currSphere.position[0], currSphere.position[1], currSphere.position[2]);
+    float check = b * b - 4 * c * a;
+
+    if ((b * b - 4 * c * a) >= 0) // valid values to get t values
+    {
+      // printf(" a: %f b: %f c: %f ,  ", a, b, c);
+      float discrim1 = (-b + sqrt(b * b - 4 * c * a)) / 2 * a;
+      float discrim2 = (-b - sqrt(b * b - 4 * c * a)) / 2 * a;
+      // if intersects, do something
+      if (discrim1 >= 0.0001 || discrim2 >= 0.0001)
+      {
+
+        float minT = min(discrim1, discrim2);
+        tValuesSphere.push_back(minT);
+        indexesSphere.push_back(k);
+      }
+    }
+    // printf(" t value: %f  ", tValues.at(0));
+  }
+  // get closest sphere and its index within spheres
+
+  if (tValuesSphere.size() != 0)
+  {
+    for (int p = 0; p < tValuesSphere.size(); p++)
+    {
+
+      if (tValuesSphere.at(p) < closeSphereT)
+      {
+
+        closeSphereT = tValuesSphere.at(p);
+        closeSphereIndex = indexesSphere.at(p);
+      }
+    }
+  }
+
+  // triangle intersection
+  for (int q = 0; q < num_triangles; q++)
+  {
+    Triangle currTri = triangles[q];
+    currTri.v[0];
+    currTri.v[1];
+    currTri.v[2];
+    // if intersects, then use barycentric coordinates
+  }
+  if (tValuesSphere.size() != 0 || tValuesTri.size() != 0) // return  intersection point if it exists for either spheres or triangles
+  {
+    float bestT;
+    if (closeSphereT < closeTriT)
+    {
+
+      bestT = closeSphereT;
+      intersectObjIndex = closeSphereIndex;
+      intersectObjType = "sphere";
+    }
+    else
+    {
+      bestT = closeTriT;
+    }
+    glm::vec3 iPoint(curr.origin.x + bestT * curr.direction.x, curr.origin.y + bestT * curr.direction.y, curr.origin.z + bestT * curr.direction.z);
+    // glm::vec3 normal(0, 0, 0);
+    return iPoint; // type of object, index in vertex
+  }
+  else
+  {
+    return maxVal; // vector of max float coordinates
+  }
 }
 
 void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b)
