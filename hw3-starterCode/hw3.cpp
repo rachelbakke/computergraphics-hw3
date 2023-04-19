@@ -112,7 +112,6 @@ void draw_scene()
 
   // get screen setup
   Ray rays[WIDTH][HEIGHT];
-  printf("START");
   for (int i = 0; i < WIDTH; i++)
   {
     for (int j = 0; j < HEIGHT; j++)
@@ -136,7 +135,7 @@ void draw_scene()
     for (unsigned int y = 0; y < HEIGHT; y++)
     {
       // plot_pixel(x, y, x % 256, y % 256, (x + y) % 256); //OG
-      // glm::vec3 currColor = colorRay(rays[x][y]);
+      glm::vec3 currColor = colorRay(rays[x][y]);
       // plot_pixel(x, y, currColor.x, currColor.y, currColor.z); //FINAL COLOR
       glm::vec3 intersectPoint = intersect(rays[x][y]);
       // printf(" %f, %f, %f", intersectPoint.x, intersectPoint.y, intersectPoint.z);
@@ -174,7 +173,7 @@ glm::vec3 colorRay(Ray curr)
       directionLight = normalize(directionLight);
       currShadow.setDirection(directionLight);
       glm::vec3 posShadowIntersect = intersect(currShadow);
-      if (posShadowIntersect != maxVal) // make sure there was an object intersected
+      if (posShadowIntersect == maxVal) // make sure there was NO object intersected
       {
         // phong model solve with normals
         // get normal of the intersection and values of shininess and everything
@@ -189,8 +188,12 @@ glm::vec3 colorRay(Ray curr)
         }
         else
         {
-          Triangle currTriangle = triangles[intersectObjIndex];
+          // Triangle currTriangle = triangles[intersectObjIndex];
         }
+      }
+      else
+      {
+        // object is in SHADOW!
       }
     }
     // add global ambiant light, clamp to 1.0 for each rbg value
@@ -264,23 +267,22 @@ glm::vec3 intersect(Ray curr)
     glm::vec3 e1(currTri.v[1].position[0] - currTri.v[0].position[0], currTri.v[1].position[1] - currTri.v[0].position[1], currTri.v[1].position[2] - currTri.v[0].position[2]);
     glm::vec3 e2(currTri.v[2].position[0] - currTri.v[0].position[0], currTri.v[2].position[1] - currTri.v[0].position[1], currTri.v[2].position[2] - currTri.v[0].position[2]);
     glm::vec3 n = glm::cross(e1, e2);
-    glm::vec3 q = curr.direction;
+    n = normalize(n);
     glm::vec3 p(curr.origin.x - currTri.v[0].position[0], curr.origin.y - currTri.v[0].position[1], curr.origin.z - currTri.v[0].position[2]);
 
-    float dot = glm::dot(n, q);
+    float dotParallel = glm::dot(n, curr.direction);
     bool notParallel = true;
-    if (dot == 0)
+    if (dotParallel == 0)
     {
-      printf("parallel");
-      notParallel = true;
+      notParallel = false;
     }
     if (notParallel)
     {
-
-      float d = -glm::dot(n, p);
-      float t = d / dot;
-      glm::vec3 intersectionPoint = curr.origin + t * q;
+      float dCoeff = -glm::dot(n, p);
+      float t = -(dot(n, curr.origin) + dCoeff) * 1.0f / (dotParallel * 1.0f);
+      glm::vec3 intersectionPoint(curr.origin.x + t * curr.direction.x, curr.origin.y + t * curr.direction.y, curr.origin.z + t * curr.direction.z);
       glm::vec3 intersectfromPoint1(intersectionPoint.x - currTri.v[0].position[0], intersectionPoint.y - currTri.v[0].position[1], intersectionPoint.z - currTri.v[0].position[2]);
+      intersectfromPoint1 = normalize(intersectfromPoint1);
 
       float u = glm::dot(glm::cross(e2, intersectfromPoint1), n) / glm::dot(n, n);
       float v = glm::dot(glm::cross(intersectfromPoint1, e1), n) / glm::dot(n, n);
@@ -317,7 +319,7 @@ glm::vec3 intersect(Ray curr)
     // printf("TRIANGLE: %f ", closeTriT);
     // if (closeSphereT < closeTriT)
     //  printf("SPHERE: %f ", closeSphereT);
-    if (closeSphereT < closeTriT || closeTriT > 2.0f) // sphere is closest
+    if (closeSphereT < closeTriT) // sphere is closest
     {
       bestT = closeSphereT;
       intersectObjIndex = closeSphereIndex;
