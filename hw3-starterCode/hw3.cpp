@@ -202,7 +202,7 @@ glm::vec3 intersect(Ray curr)
   float closeSphereIndex;
 
   vector<float> tValuesTri;
-  vector<int> indexedTri;
+  vector<int> indexesTri;
   float closeTriT = MAXFLOAT;
   float closeTriIndex;
 
@@ -234,8 +234,7 @@ glm::vec3 intersect(Ray curr)
     }
     // printf(" t value: %f  ", tValues.at(0));
   }
-  // get closest sphere and its index within spheres
-
+  // get closest sphere and its index within Spheres array
   if (tValuesSphere.size() != 0)
   {
     for (int p = 0; p < tValuesSphere.size(); p++)
@@ -243,7 +242,6 @@ glm::vec3 intersect(Ray curr)
 
       if (tValuesSphere.at(p) < closeSphereT)
       {
-
         closeSphereT = tValuesSphere.at(p);
         closeSphereIndex = indexesSphere.at(p);
       }
@@ -257,14 +255,25 @@ glm::vec3 intersect(Ray curr)
     currTri.v[0];
     currTri.v[1];
     currTri.v[2];
-    // if intersects, then use barycentric coordinates
+  }
+  // get closest t triangle and its index within Triangle array
+  if (tValuesTri.size() != 0)
+  {
+    for (int p = 0; p < tValuesTri.size(); p++)
+    {
+
+      if (tValuesTri.at(p) < closeTriT)
+      {
+        closeTriT = tValuesTri.at(p);
+        closeTriIndex = indexesTri.at(p);
+      }
+    }
   }
   if (tValuesSphere.size() != 0 || tValuesTri.size() != 0) // return  intersection point if it exists for either spheres or triangles
   {
     float bestT;
-    if (closeSphereT < closeTriT)
+    if (closeSphereT < closeTriT) // sphere is closeest
     {
-
       bestT = closeSphereT;
       intersectObjIndex = closeSphereIndex;
       intersectObjType = "sphere";
@@ -272,6 +281,8 @@ glm::vec3 intersect(Ray curr)
     else
     {
       bestT = closeTriT;
+      intersectObjIndex = closeTriIndex;
+      intersectObjType = "triangle";
     }
     glm::vec3 iPoint(curr.origin.x + bestT * curr.direction.x, curr.origin.y + bestT * curr.direction.y, curr.origin.z + bestT * curr.direction.z);
     // glm::vec3 normal(0, 0, 0);
