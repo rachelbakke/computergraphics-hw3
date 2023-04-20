@@ -6,6 +6,7 @@
  * ./hw3 ./spheres.scene output.jpg
  *  ./hw3 ./test1.scene output.jpg
  * ./hw3 ./test2.scene output.jpg
+ * ./hw3 ./table.scene output.jpg
  */
 
 #ifdef WIN32
@@ -47,8 +48,8 @@ char *filename = NULL;
 int mode = MODE_DISPLAY;
 
 // you may want to make these smaller for debugging purposes
-#define WIDTH 640
-#define HEIGHT 480
+#define WIDTH 640 / 3
+#define HEIGHT 480 / 3
 
 // the field of view of the camera
 #define fov 60.0
@@ -109,6 +110,24 @@ glm::vec3 maxVal(MAXFLOAT, MAXFLOAT, MAXFLOAT);
 // MODIFY THIS FUNCTION
 void draw_scene()
 {
+  float aVal = (WIDTH * 1.0f) / (HEIGHT * 1.0f);
+  float topLeftX = -aVal * tan(glm::radians(fov) / 2.0f);
+  float topLeftY = tan(glm::radians(fov) / 2.0f);
+  float topLeftZ = -1;
+  float topRightX = aVal * tan(glm::radians(fov) / 2.0f);
+  float topRightY = tan(glm::radians(fov) / 2.0f);
+  float topRightZ = -1;
+  float botRightX = aVal * tan(glm::radians(fov) / 2.0f);
+  float botRightY = -tan(glm::radians(fov) / 2.0f);
+  float botRightZ = -1;
+  float botLeftX = -aVal * tan(glm::radians(fov) / 2.0f);
+  float botLeftY = -tan(glm::radians(fov) / 2.0f);
+  float botLeftZ = -1;
+
+  float width3D = sqrt(pow(topRightX - topLeftX, 2) + pow(topRightY - topLeftY, 2) + pow(topRightZ - topLeftZ, 2)) * 1.0f;
+  float height3D = sqrt(pow(topRightX - botRightX, 2) + pow(topRightY - botRightY, 2) + pow(topRightZ - botRightZ, 2) * 1.0f);
+  float wStepSize = (width3D * 1.0f) / (1.0f * WIDTH);
+  float hStepSize = (height3D * 1.0f) / (HEIGHT * 1.0f);
 
   // get screen setup
   Ray rays[WIDTH][HEIGHT];
@@ -117,10 +136,10 @@ void draw_scene()
     for (int j = 0; j < HEIGHT; j++)
     {
       // STEP 1! generate rays
-      float aVal = (WIDTH * 1.0f) / (HEIGHT * 1.0f);
-      float xVal = (2.0f * (i + 0.5f) / (WIDTH * 1.0f) - 1.0f) * aVal * tan(glm::radians(fov) / 2.0f);
-      float yVal = (1.0f - 2.0f * (j + 0.5f) / (HEIGHT * 1.0f) * tan(glm::radians(fov) / 2.0f));
-      glm::vec3 direction(xVal, -yVal, -1); // todo
+
+      float xVal = (i * wStepSize) + botLeftX;
+      float yVal = (j * hStepSize) + botLeftY;
+      glm::vec3 direction(xVal, yVal, -1); //
       direction = normalize(direction);
       glm::vec3 origin1((0, 0, 0));
       Ray currRay = Ray(origin1, direction);
@@ -136,18 +155,17 @@ void draw_scene()
     {
       // plot_pixel(x, y, x % 256, y % 256, (x + y) % 256); //OG
       glm::vec3 currColor = colorRay(rays[x][y]);
-      // plot_pixel(x, y, currColor.x, currColor.y, currColor.z); //FINAL COLOR
-      glm::vec3 intersectPoint = intersect(rays[x][y]);
-      // printf(" %f, %f, %f", intersectPoint.x, intersectPoint.y, intersectPoint.z);
+      plot_pixel(x, y, currColor.x * 255, currColor.y * 255, currColor.z * 255); // FINAL COLOR
+      /**glm::vec3 intersectPoint = intersect(rays[x][y]);
+      //   printf(" %f, %f, %f", intersectPoint.x, intersectPoint.y, intersectPoint.z);
       if (intersectPoint != maxVal) // yes intersects
       {
         plot_pixel(x, y, 255, 192, 203); // COLOR INTERSECT
       }
       else
       {
-        // printf("NOINTERSECTION");
         plot_pixel(x, y, 0.0f, 0.0f, 0.0f);
-      }
+      } */
     }
     glEnd();
     glFlush();
@@ -180,15 +198,53 @@ glm::vec3 colorRay(Ray curr)
         if (intersectObjType == "sphere")
         {
           Sphere currSphere = spheres[intersectObjIndex];
-          printf("sphere check %d", intersectObjIndex);
-          // need to know shape type and index to access it here and get its normal
-          float Ix = lights[l].color[0] * directionLight.x;
-          float Iy = lights[l].color[1];
-          float Iz = lights[l].color[2];
+          // printf("sphere check %d", intersectObjIndex);
+          //  need to know shape type and index to access it here and get its normal
+          // i = ightcolor * (kd * (L dot N) + ks * (R dot V) ^ sh)
+          glm::vec3 R(1, 1, 1);
+          glm::vec3 normal(posIntersect.x - currSphere.position[0], posIntersect.y - currSphere.position[1], posIntersect.z - currSphere.position[2]);
+          normal = glm::normalize(float(1.0 / currSphere.radius) * normal);
+          R = 2.0f * dot(directionLight, normal) * normal - directionLight;
+          // clamp dot products to 0
+          float kdx = float(currSphere.color_diffuse[0]);
+          float kdy = float(currSphere.color_diffuse[1]);
+          float kdz = float(currSphere.color_diffuse[2]);
+          float ksx = float(currSphere.color_specular[0]);
+          float ksy = float(currSphere.color_specular[1]);
+          float ksz = float(currSphere.color_specular[2]);
+          float dotExpo = pow(glm::dot(curr.direction, R), currSphere.shininess);
+          float Ix = lights[l].color[0] * (kdx * glm::dot(directionLight, normal) + ksx * dotExpo);
+          float Iy = lights[l].color[1] * (kdy * glm::dot(directionLight, normal) + ksy * dotExpo);
+          float Iz = lights[l].color[2] * (kdz * glm::dot(directionLight, normal) + ksz * dotExpo);
+          glm::vec3 c(Ix, Iy, Iz);
+          color = c;
+          // printf("\nthis is color values: %f , %f, %f ", color.x, color.y, color.z);
         }
         else
         {
-          // Triangle currTriangle = triangles[intersectObjIndex];
+          Triangle currTri = triangles[intersectObjIndex];
+          // printf("sphere check %d", intersectObjIndex);
+          //  need to know shape type and index to access it here and get its normal
+          // i = ightcolor * (kd * (L dot N) + ks * (R dot V) ^ sh)
+          glm::vec3 R(1, 1, 1);
+          glm::vec3 e1(currTri.v[1].position[0] - currTri.v[0].position[0], currTri.v[1].position[1] - currTri.v[0].position[1], currTri.v[1].position[2] - currTri.v[0].position[2]);
+          // e1 = normalize(e1);
+          glm::vec3 e2(currTri.v[2].position[0] - currTri.v[0].position[0], currTri.v[2].position[1] - currTri.v[0].position[1], currTri.v[2].position[2] - currTri.v[0].position[2]);
+          // e2 = normalize(e2);
+          glm::vec3 n = glm::cross(e1, e2);
+          n = normalize(n);
+          R = 2.0f * dot(directionLight, n) * n - directionLight;
+          // clamp dot products to 0
+          float kdx = float(currSphere.color_diffuse[0]);
+          float kdy = float(currSphere.color_diffuse[1]);
+          float kdz = float(currSphere.color_diffuse[2]);
+
+          float dotExpo = pow(glm::dot(curr.direction, R), currSphere.shininess);
+          float Ix = lights[l].color[0] * (kdx * glm::dot(directionLight, normal) + float(currSphere.color_specular[0]) * dotExpo);
+          float Iy = lights[l].color[1] * (kdy * glm::dot(directionLight, normal) + float(currSphere.color_specular[1]) * dotExpo);
+          float Iz = lights[l].color[2] * (kdz * glm::dot(directionLight, normal) + float(currSphere.color_specular[2]) * dotExpo);
+          glm::vec3 c(Ix, Iy, Iz);
+          color = c;
         }
       }
       else
@@ -198,6 +254,9 @@ glm::vec3 colorRay(Ray curr)
     }
     // add global ambiant light, clamp to 1.0 for each rbg value
   }
+  color.x += ambient_light[0];
+  color.y += ambient_light[1];
+  color.z += ambient_light[2];
   return color;
   // get normal of intersection point
   // cast shadow rays to each of the light sources
@@ -261,40 +320,46 @@ glm::vec3 intersect(Ray curr)
   for (int w = 0; w < num_triangles; w++)
   {
     Triangle currTri = triangles[w];
-    currTri.v[0];
-    currTri.v[1];
-    currTri.v[2];
     glm::vec3 e1(currTri.v[1].position[0] - currTri.v[0].position[0], currTri.v[1].position[1] - currTri.v[0].position[1], currTri.v[1].position[2] - currTri.v[0].position[2]);
+    // e1 = normalize(e1);
     glm::vec3 e2(currTri.v[2].position[0] - currTri.v[0].position[0], currTri.v[2].position[1] - currTri.v[0].position[1], currTri.v[2].position[2] - currTri.v[0].position[2]);
+    // e2 = normalize(e2);
     glm::vec3 n = glm::cross(e1, e2);
     n = normalize(n);
-    glm::vec3 p(curr.origin.x - currTri.v[0].position[0], curr.origin.y - currTri.v[0].position[1], curr.origin.z - currTri.v[0].position[2]);
+    glm::vec3 pointOnPlane(currTri.v[0].position[0], currTri.v[0].position[1], currTri.v[0].position[2]);
+    // pointOnPlane = normalize(pointOnPlane);
 
-    float dotParallel = glm::dot(n, curr.direction);
+    float dotProductND = glm::dot(n, curr.direction);
     bool notParallel = true;
-    if (dotParallel == 0)
+    if (dotProductND == 0)
     {
       notParallel = false;
     }
     if (notParallel)
     {
-      float dCoeff = -glm::dot(n, p);
-      float t = -(dot(n, curr.origin) + dCoeff) * 1.0f / (dotParallel * 1.0f);
+      float dCoeff = glm::dot(n, pointOnPlane);
+      float t = (dot(n, curr.origin) + dCoeff) / (dotProductND);
       glm::vec3 intersectionPoint(curr.origin.x + t * curr.direction.x, curr.origin.y + t * curr.direction.y, curr.origin.z + t * curr.direction.z);
-      glm::vec3 intersectfromPoint1(intersectionPoint.x - currTri.v[0].position[0], intersectionPoint.y - currTri.v[0].position[1], intersectionPoint.z - currTri.v[0].position[2]);
-      intersectfromPoint1 = normalize(intersectfromPoint1);
+      // intersectionPoint = normalize(intersectionPoint);
+      glm::vec3 intersectfromVertex0(intersectionPoint.x - currTri.v[0].position[0], intersectionPoint.y - currTri.v[0].position[1], intersectionPoint.z - currTri.v[0].position[2]);
+      // intersectfromVertex0 = normalize(intersectfromVertex0);
+      //     e2 is from v2 to v0 and
+      float beta = glm::length(glm::cross(e2, intersectfromVertex0)) / glm::length(glm::cross(e1, e2));
+      float alpha = glm::length(glm::cross(intersectfromVertex0, e1)) / glm::length(glm::cross(e1, e2));
 
-      float u = glm::dot(glm::cross(e2, intersectfromPoint1), n) / glm::dot(n, n);
-      float v = glm::dot(glm::cross(intersectfromPoint1, e1), n) / glm::dot(n, n);
       bool notOutside = true;
-      if (u < 0 || v < 0 || u + v > 1)
+      if (beta < 0 || alpha < 0 || beta + alpha > 1)
       {
+        // printf("\nthis is beta: %f and this is alpha %f ", beta, alpha);
         notOutside = false;
       }
-
+      else
+      {
+        // printf("valid inside");
+      }
       if (t >= 0.001 && notOutside) // determine if it is intersected
       {
-        // printf("tvalue: %f ", t);
+        // printf("\nthis is the t value: %f ", t);
         tValuesTri.push_back(t);
         indexesTri.push_back(w);
       }
@@ -330,6 +395,7 @@ glm::vec3 intersect(Ray curr)
       bestT = closeTriT;
       intersectObjIndex = closeTriIndex;
       intersectObjType = "triangle";
+      // printf(" drawing triangle ");
     }
     glm::vec3 iPoint(curr.origin.x + bestT * curr.direction.x, curr.origin.y + bestT * curr.direction.y, curr.origin.z + bestT * curr.direction.z);
     // glm::vec3 normal(0, 0, 0);
