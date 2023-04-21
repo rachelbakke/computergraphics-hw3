@@ -99,7 +99,7 @@ int num_spheres = 0;
 int num_lights = 0;
 string intersectObjType = "sphere";
 int intersectObjIndex = 0;
-glm::vec3 intersectObjPos(0, 0, 0);
+// glm::vec3 intersectObjPos(0, 0, 0);
 
 void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b);
 void plot_pixel_jpeg(int x, int y, unsigned char r, unsigned char g, unsigned char b);
@@ -202,8 +202,8 @@ glm::vec3 colorRay(Ray curr)
           glm::vec3 normal(posIntersect.x - currSphere.position[0], posIntersect.y - currSphere.position[1], posIntersect.z - currSphere.position[2]);
           normal = glm::normalize(normal / float(currSphere.radius));
           glm::vec3 R = 2 * dot(directionLight, normal) * normal - directionLight;
-          R = normalize(R);
-          // clamp dot products to 0
+          // R = normalize(R);
+          //  clamp dot products to 0
           float kdx = float(currSphere.color_diffuse[0]);
           float kdy = float(currSphere.color_diffuse[1]);
           float kdz = float(currSphere.color_diffuse[2]);
@@ -211,6 +211,7 @@ glm::vec3 colorRay(Ray curr)
           float ksx = float(currSphere.color_specular[0]);
           float ksy = float(currSphere.color_specular[1]);
           float ksz = float(currSphere.color_specular[2]);
+
           float RVdotExpo = pow(glm::dot(-curr.direction, R), currSphere.shininess);
           float LdotN = glm::dot(directionLight, normal);
           if (LdotN < 0)
@@ -228,30 +229,27 @@ glm::vec3 colorRay(Ray curr)
         else
         {
           Triangle currTri = triangles[intersectObjIndex];
-          // printf("sphere check %d", intersectObjIndex);
           //  need to know shape type and index to access it here and get its normal
-          // i = ightcolor * (kd * (L dot N) + ks * (R dot V) ^ sh)
           glm::vec3 R(1, 1, 1);
           glm::vec3 e1(currTri.v[1].position[0] - currTri.v[0].position[0], currTri.v[1].position[1] - currTri.v[0].position[1], currTri.v[1].position[2] - currTri.v[0].position[2]);
           glm::vec3 e2(currTri.v[2].position[0] - currTri.v[0].position[0], currTri.v[2].position[1] - currTri.v[0].position[1], currTri.v[2].position[2] - currTri.v[0].position[2]);
           glm::vec3 e3(currTri.v[2].position[0] - currTri.v[1].position[0], currTri.v[2].position[1] - currTri.v[1].position[1], currTri.v[2].position[2] - currTri.v[1].position[2]);
-          // glm::vec3 e3(currTri.v[0].position[0] - currTri.v[1].position[0], currTri.v[2].position[1] - currTri.v[1].position[1], currTri.v[2].position[2] - currTri.v[1].position[2]);
-          glm::vec3 normal1 = glm::cross(e1, e2);   // from v0
-          glm::vec3 normal2 = glm::cross(e3, -e1);  // from v1
-          glm::vec3 normal3 = glm::cross(-e2, -e3); // from v2
-          normal1 = normalize(normal1);
-          normal2 = normalize(normal2);
-          normal2 = normalize(normal2);
+          glm::vec3 normal1(currTri.v[0].normal[0], currTri.v[0].normal[1], currTri.v[0].normal[2]); // glm::cross(e1, e2);   // from v0
+          glm::vec3 normal2(currTri.v[1].normal[0], currTri.v[1].normal[1], currTri.v[1].normal[2]); // glm::cross(e3, -e1);  // from v1
+          glm::vec3 normal3(currTri.v[2].normal[0], currTri.v[2].normal[1], currTri.v[2].normal[2]); // glm::cross(-e2, -e3); // from v2
+          // normal1 = normalize(normal1);
+          // normal2 = normalize(normal2);
+          // normal3 = normalize(normal3);
 
           glm::vec3 intersectfromVertex0(posIntersect.x - currTri.v[0].position[0], posIntersect.y - currTri.v[0].position[1], posIntersect.z - currTri.v[0].position[2]);
           glm::vec3 intersectfromVertex1(posIntersect.x - currTri.v[1].position[0], posIntersect.y - currTri.v[1].position[1], posIntersect.z - currTri.v[1].position[2]);
           float alpha = glm::length(glm::cross(intersectfromVertex1, e3)) / glm::length(glm::cross(e1, e2));
           float beta = glm::length(glm::cross(e2, intersectfromVertex0)) / glm::length(glm::cross(e1, e2));
           float gamma = glm::length(glm::cross(intersectfromVertex0, e1)) / glm::length(glm::cross(e1, e2));
-          glm::vec3 normal = normalize(normal1 * alpha + beta * normal2 + gamma * normal3);
+          glm::vec3 normal = normal1 * alpha + beta * normal2 + gamma * normal3;
           R = 2.0f * glm::dot(directionLight, normal) * normal - directionLight;
           R = normalize(R);
-          // clamp dot products to 0
+          //   clamp dot products to 0
           float kdx = float(currTri.v[0].color_diffuse[0] * alpha + beta * currTri.v[1].color_diffuse[0] + gamma * currTri.v[2].color_diffuse[0]);
           float kdy = float(currTri.v[0].color_diffuse[1] * alpha + beta * currTri.v[1].color_diffuse[1] + gamma * currTri.v[2].color_diffuse[1]);
           float kdz = float(currTri.v[0].color_diffuse[2] * alpha + beta * currTri.v[1].color_diffuse[2] + gamma * currTri.v[2].color_diffuse[2]);
@@ -259,16 +257,17 @@ glm::vec3 colorRay(Ray curr)
           float ksx = float(currTri.v[0].color_specular[0] * alpha + beta * currTri.v[1].color_specular[0] + gamma * currTri.v[2].color_specular[0]);
           float ksy = float(currTri.v[0].color_specular[1] * alpha + beta * currTri.v[1].color_specular[1] + gamma * currTri.v[2].color_specular[1]);
           float ksz = float(currTri.v[0].color_specular[2] * alpha + beta * currTri.v[1].color_specular[2] + gamma * currTri.v[2].color_specular[2]);
-          float triShine = currTri.v[0].shininess * alpha + beta * currTri.v[1].shininess + gamma * currTri.v[2].shininess;
+          // printf(" alpha: %f, beta: %f, gamma: %f", alpha, beta, gamma);
+          float triShine = float(currTri.v[0].shininess) * alpha + beta * float(currTri.v[1].shininess) + gamma * float(currTri.v[2].shininess);
           float LdotN = glm::dot(directionLight, normal);
           float RVdotExpo = pow(glm::dot(-curr.direction, R), triShine);
-          if (LdotN < 0)
+          if (LdotN < 1e-3)
             LdotN = 0.0;
-          if (RVdotExpo < 0)
+          if (RVdotExpo < 1e-3)
             RVdotExpo = 0.0;
-          float Ix = lights[l].color[0] * (kdx * LdotN + ksx * RVdotExpo);
-          float Iy = lights[l].color[1] * (kdy * LdotN + ksy * RVdotExpo);
-          float Iz = lights[l].color[2] * (kdz * LdotN + ksz * RVdotExpo);
+          float Ix = float(lights[l].color[0]) * (kdx * LdotN + ksx * RVdotExpo);
+          float Iy = float(lights[l].color[1]) * (kdy * LdotN + ksy * RVdotExpo);
+          float Iz = float(lights[l].color[2]) * (kdz * LdotN + ksz * RVdotExpo);
           // glm::vec3 c(Ix, Iy, Iz);
           color.x += Ix;
           color.y += Iy;
@@ -284,9 +283,9 @@ glm::vec3 colorRay(Ray curr)
       }
     }
     // add global ambiant light, clamp to 1.0 for each rbg value
-    color.x += ambient_light[0];
-    color.y += ambient_light[1];
-    color.z += ambient_light[2];
+    // color.x += float(ambient_light[0]);
+    // color.y += float(ambient_light[1]);
+    // color.z += float(ambient_light[2]);
   }
   if (color.x > 1.0)
     color.x = 1;
@@ -324,13 +323,13 @@ glm::vec3 intersect(Ray curr)
     //   printf("radius %f pos %f %f %f\n", currSphere.radius, currSphere.position[0], currSphere.position[1], currSphere.position[2]);
     float check = b * b - 4 * c * a;
 
-    if ((b * b - 4 * c * a) >= 0) // valid values to get t values
+    if ((b * b - 4 * c * a) >= 1e-2) // valid values to get t values
     {
       // printf(" a: %f b: %f c: %f ,  ", a, b, c);
       float discrim1 = (-b + sqrt(b * b - 4 * c * a)) / 2 * a;
       float discrim2 = (-b - sqrt(b * b - 4 * c * a)) / 2 * a;
       // if intersects, do something
-      if (discrim1 >= 1e-2 || discrim2 >= 1e-1)
+      if (discrim1 >= 1e-2 || discrim2 >= 1e-2)
       {
         float minT = min(discrim1, discrim2);
         tValuesSphere.push_back(minT);
@@ -361,6 +360,9 @@ glm::vec3 intersect(Ray curr)
     glm::vec3 v0Tov2(currTri.v[2].position[0] - currTri.v[0].position[0], currTri.v[2].position[1] - currTri.v[0].position[1], currTri.v[2].position[2] - currTri.v[0].position[2]);
     glm::vec3 v1Tov2(currTri.v[2].position[0] - currTri.v[1].position[0], currTri.v[2].position[1] - currTri.v[1].position[1], currTri.v[2].position[2] - currTri.v[1].position[2]);
     glm::vec3 n = glm::cross(v0Tov1, v0Tov2);
+    // v0Tov1 = normalize(v0Tov1);
+    // v0Tov2 = normalize(v0Tov2);
+    // v1Tov2 = normalize(v1Tov2);
     n = normalize(n);
     glm::vec3 pointOnPlane(currTri.v[0].position[0], currTri.v[0].position[1], currTri.v[0].position[2]);
     // pointOnPlane = normalize(pointOnPlane);
@@ -381,13 +383,13 @@ glm::vec3 intersect(Ray curr)
       glm::vec3 intersectfromVertex1(intersectionPoint.x - currTri.v[1].position[0], intersectionPoint.y - currTri.v[1].position[1], intersectionPoint.z - currTri.v[1].position[2]);
       // intersectfromVertex0 = normalize(intersectfromVertex0);
       // intersectfromVertex1 = normalize(intersectfromVertex1);
-      //      e2 is from v2 to v0 and
+      //       e2 is from v2 to v0 and
       float alpha = glm::length(glm::cross(intersectfromVertex1, v1Tov2)) / glm::length(glm::cross(v0Tov1, v0Tov2));
       float beta = glm::length(glm::cross(v0Tov2, intersectfromVertex0)) / glm::length(glm::cross(v0Tov1, v0Tov2));
       float gamma = glm::length(glm::cross(intersectfromVertex0, v0Tov1)) / glm::length(glm::cross(v0Tov1, v0Tov2));
 
       bool outside;
-      if (alpha >= 0 && alpha <= 1 && beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1 && fabs(alpha + beta + gamma - 1.0) < 1e-9)
+      if (alpha >= 0 && alpha <= 1 && beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1 && fabs(alpha + beta + gamma - 1.0) < 1e-11)
       {
         // printf("\nthis is beta: %f and this is alpha %f ", beta, alpha);
         outside = false;
@@ -396,7 +398,7 @@ glm::vec3 intersect(Ray curr)
       {
         outside = true;
       }
-      if (t >= 0.001 && !outside) // determine if it is intersected
+      if (t >= 1e-7 && !outside) // determine if it is intersected
       {
         // printf("\nthis is the t value: %f ", t);
         tValuesTri.push_back(t);
