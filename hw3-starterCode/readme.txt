@@ -15,11 +15,11 @@ Feature:                                 Status: finish? (yes/no)
 
 2) Ray tracing sphere                     Yes
 
-3) Triangle Phong Shading                 !!!no, explain!!!
+3) Triangle Phong Shading                 Yes
 
 4) Sphere Phong Shading                   Yes
 
-5) Shadows rays                           !!!no, explain!!!
+5) Shadows rays                           Partially, completely for spheres and not for triangles
 
 6) Still images                           !!!no, explain!!!
    
