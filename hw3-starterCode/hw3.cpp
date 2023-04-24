@@ -156,7 +156,7 @@ void draw_scene()
     {
       // plot_pixel(x, y, x % 256, y % 256, (x + y) % 256); //OG
       glm::vec3 currColor = colorRay(rays[x][y]);
-      plot_pixel(x, y, currColor.x * 256, currColor.y * 256, currColor.z * 256); // FINAL COLOR
+      plot_pixel(x, y, currColor.x * 255, currColor.y * 255, currColor.z * 255); // FINAL COLOR
       /** glm::vec3 intersectPoint = intersect(rays[x][y]);
       if (intersectPoint != maxVal) // yes intersects
       {
@@ -203,7 +203,7 @@ glm::vec3 colorRay(Ray curr)
           normal = glm::normalize(normal / float(currSphere.radius));
           glm::vec3 R = 2 * dot(directionLight, normal) * normal - directionLight;
           // R = normalize(R);
-          //  clamp dot products to 0
+          //   clamp dot products to 0
           float kdx = float(currSphere.color_diffuse[0]);
           float kdy = float(currSphere.color_diffuse[1]);
           float kdz = float(currSphere.color_diffuse[2]);
@@ -249,7 +249,7 @@ glm::vec3 colorRay(Ray curr)
           glm::vec3 normal = normal1 * alpha + beta * normal2 + gamma * normal3;
           R = 2.0f * glm::dot(directionLight, normal) * normal - directionLight;
           R = normalize(R);
-          //   clamp dot products to 0
+          //    clamp dot products to 0
           float kdx = float(currTri.v[0].color_diffuse[0] * alpha + beta * currTri.v[1].color_diffuse[0] + gamma * currTri.v[2].color_diffuse[0]);
           float kdy = float(currTri.v[0].color_diffuse[1] * alpha + beta * currTri.v[1].color_diffuse[1] + gamma * currTri.v[2].color_diffuse[1]);
           float kdz = float(currTri.v[0].color_diffuse[2] * alpha + beta * currTri.v[1].color_diffuse[2] + gamma * currTri.v[2].color_diffuse[2]);
@@ -261,9 +261,9 @@ glm::vec3 colorRay(Ray curr)
           float triShine = float(currTri.v[0].shininess) * alpha + beta * float(currTri.v[1].shininess) + gamma * float(currTri.v[2].shininess);
           float LdotN = glm::dot(directionLight, normal);
           float RVdotExpo = pow(glm::dot(-curr.direction, R), triShine);
-          if (LdotN < 1e-3)
+          if (LdotN < 1e-5)
             LdotN = 0.0;
-          if (RVdotExpo < 1e-3)
+          if (RVdotExpo < 1e-5)
             RVdotExpo = 0.0;
           float Ix = float(lights[l].color[0]) * (kdx * LdotN + ksx * RVdotExpo);
           float Iy = float(lights[l].color[1]) * (kdy * LdotN + ksy * RVdotExpo);
@@ -283,9 +283,9 @@ glm::vec3 colorRay(Ray curr)
       }
     }
     // add global ambiant light, clamp to 1.0 for each rbg value
-    // color.x += float(ambient_light[0]);
-    // color.y += float(ambient_light[1]);
-    // color.z += float(ambient_light[2]);
+    color.x += float(ambient_light[0]);
+    color.y += float(ambient_light[1]);
+    color.z += float(ambient_light[2]);
   }
   if (color.x > 1.0)
     color.x = 1;
@@ -389,7 +389,7 @@ glm::vec3 intersect(Ray curr)
       float gamma = glm::length(glm::cross(intersectfromVertex0, v0Tov1)) / glm::length(glm::cross(v0Tov1, v0Tov2));
 
       bool outside;
-      if (alpha >= 0 && alpha <= 1 && beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1 && fabs(alpha + beta + gamma - 1.0) < 1e-11)
+      if (alpha >= 0 && alpha <= 1 && beta >= 0 && beta <= 1 && gamma >= 0 && gamma <= 1 && fabs(alpha + beta + gamma - 1.0) < 1e-3)
       {
         // printf("\nthis is beta: %f and this is alpha %f ", beta, alpha);
         outside = false;
@@ -398,7 +398,7 @@ glm::vec3 intersect(Ray curr)
       {
         outside = true;
       }
-      if (t >= 1e-7 && !outside) // determine if it is intersected
+      if (t >= 1e-3 && !outside) // determine if it is intersected
       {
         // printf("\nthis is the t value: %f ", t);
         tValuesTri.push_back(t);
