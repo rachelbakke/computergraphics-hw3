@@ -2,6 +2,8 @@ Assignment #3: Ray tracing
 
 FULL NAME: Rachel Bakke
 
+With my files, I show test1, test2, spheres, and toy (has multiple lights) as well as my custom bubble scene.
+
 
 MANDATORY FEATURES
 ------------------
@@ -24,7 +26,7 @@ Feature:                                 Status: finish? (yes/no)
 6) Still images                           Yes 
    
 7) Extra Credit (up to 30 points)
-   - I completed anti-aliasing through supersampling with 4 vector batches
+   - I completed anti-aliasing through supersampling with 4 vector batches. This is done for all scenes shown. 
    - I made my own custom scene (bubbles.scene).
    - I created an animation that are bubbles rising in water 
    to the surface with irregular movement patterns for a natural effect.
