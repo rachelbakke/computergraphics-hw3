@@ -3,13 +3,6 @@
  * Assignment 3 Raytracer
  * Name: Rachel Bakke
  * *************************
- * ./hw3 ./spheres.scene output.jpg
- *  ./hw3 ./test1.scene output.jpg
- * ./hw3 ./test2.scene output.jpg
- * ./hw3 ./table.scene output.jpg
- * ./hw3 ./SIGGRAPH.scene output.jpg
- * ./hw3 ./toy.scene output.jpg
- * ./hw3 ./bubbles.scene output.jpg
  */
 
 #ifdef WIN32
@@ -185,7 +178,7 @@ glm::vec3 colorRay(Ray curr)
       float distanceToLight = glm::length(objToLight);
       objToLight = normalize(objToLight);
 
-      glm::vec3 newShadowOrigin(posObjIntersect.x + 0.0001f * objToLight.x, posObjIntersect.y + 0.0001f * objToLight.y, posObjIntersect.z + 0.0001f * objToLight.z);
+      glm::vec3 newShadowOrigin(posObjIntersect.x + 0.00001f * objToLight.x, posObjIntersect.y + 0.00001f * objToLight.y, posObjIntersect.z + 0.00001f * objToLight.z);
       currShadow.setOrigin(newShadowOrigin);
 
       currShadow.setDirection(objToLight);
@@ -200,7 +193,7 @@ glm::vec3 colorRay(Ray curr)
                             posShadowIntersect.z - posObjIntersect.z);
       float distShadow = glm::length(objToShadow);
 
-      if (shadowT == MAXFLOAT) // NOT IN SHADOW
+      if (shadowT == MAXFLOAT && shadowT > 1e-3) // NOT IN SHADOW
       {
         // phong model solve with normals
         // get normal of the intersection and values of shininess and everything
@@ -296,22 +289,20 @@ glm::vec3 colorRay(Ray curr)
           color.x += Ix;
           color.y += Iy;
           color.z += Iz;
+          // printf("\nlight num: %d colorx: %f, colory: %f, colorz: %f", l, color.x * 255, color.y * 255, color.z);
         }
       }
       else
       {
-
+        // printf("\nshadow + light num: %d colorx: %f, colory: %f, colorz: %f", l, color.x * 255, color.y * 255, color.z);
         // object is in SHADOW!
-        color.x = color.x * 0.1;
-        color.y = color.y * 0.1;
-        color.z = color.z * 0.1;
+        // color.x = 0; // color.x * 0.1;
+        // color.y = 0; // color.y * 0.1;
+        // color.z = 0; // color.z * 0.1;
       }
-    }
+    } // end of singular light routine
     // add global ambiant light, clamp to 1.0 for each rbg value
-    color.x += float(ambient_light[0]);
-    color.y += float(ambient_light[1]);
-    color.z += float(ambient_light[2]);
-  }
+  } // end of intersection point
   else
   {
     // blue
@@ -322,11 +313,16 @@ glm::vec3 colorRay(Ray curr)
     color.y = 1.0;
     color.z = 1.0;
   }
-  if (color.x > 1.00001)
+  // add ambient light
+
+  color.x += float(ambient_light[0]);
+  color.y += float(ambient_light[1]);
+  color.z += float(ambient_light[2]);
+  if (color.x > 1.0)
     color.x = 1.0;
-  if (color.y > 1.00001)
+  if (color.y > 1.0)
     color.y = 1.0;
-  if (color.z > 1.0001)
+  if (color.z > 1.0)
     color.z = 1.0;
   return color;
   // get normal of intersection point
