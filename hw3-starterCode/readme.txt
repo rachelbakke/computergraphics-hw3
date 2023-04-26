@@ -19,9 +19,11 @@ Feature:                                 Status: finish? (yes/no)
 
 4) Sphere Phong Shading                   Yes
 
-5) Shadows rays                           Partially, completely for spheres and not for triangles
+5) Shadows rays                           Yes
 
-6) Still images                           !!!no, explain!!!
+6) Still images                           Yes 
    
-7) Extra Credit (up to 20 points)
-   !!! explain your extra credit here, if applicable !!!
+7) Extra Credit (up to 30 points)
+   Completed anti-aliasing through supersampling with 4 vector batches
+   I made my own custom scene (bubbles.scene) and animation that are bubbles 
+   in waterrising to the surface with irregular movement patterns for a natural effect.
